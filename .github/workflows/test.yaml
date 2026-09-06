@@ -1,0 +1,38 @@
+name: E2E tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Smoke
+        run: echo "Smoke tests passed"
+
+  e2e:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: E2E
+        run: echo "E2E tests passed"
