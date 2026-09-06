@@ -1,0 +1,60 @@
+name:  E2E tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    - cron: '0 5 * * *' # nightly, 05:00 UTC
+  workflow_dispatch:
+
+# Only the latest run per branch is useful, cancel the older one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Stage 1: lint, unit test and the @smoke tests in Chromium. About a minute.
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json # "engines" field
+          cache: npm
+      - run: npm ci
+      - name: Lint and format check
+        run: npm run lint
+      - name: Unit tests
+        run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Smoke tests (Chromium)
+        run: npm run test:smoke
+
+  # Stage 2: full suite in Chromium, Firefox and WebKit. Runs only when smoke is green.
+  e2e:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - name: E2E tests (Chromium, Firefox, WebKit)
+        run: npx playwright test
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
