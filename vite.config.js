@@ -6,6 +6,9 @@ export default defineConfig({
   server: {
     port: 5173,
     open: true
+  },
+  test: {
+    // Vitest runs the unit test only. The Playwright specs in e2e/ have their own runner.
+    include: ['js/**/*.test.js']
   }
 })
-
